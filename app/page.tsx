@@ -1,65 +1,190 @@
-import Image from "next/image";
+'use client'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+
+// define the shape of our table data
+type Shop = {
+  id?: number
+  name: string
+  favorite_color: string
+  created_at?: string
+}
 
 export default function Home() {
+  const [shops, setShops] = useState<Shop[]>([])
+  const [name, setName] = useState('')
+  const [color, setColor] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetchShops()
+  }, [])
+
+  // Fetch all rows from Supabase table
+  async function fetchShops() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('Shops')              // ✅ Fixed
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error(
+        ':x: Error fetching data:',
+        (error as any).message ?? 'No message',
+        (error as any).details ?? 'No details'
+      )
+    } else {
+      console.log(':white_check_mark: Data fetched:', data)
+      setShops(data || [])
+    }
+    setLoading(false)
+  }
+
+  // Insert a new shop into the Supabase table
+  async function addShop() {
+    if (!name.trim() || !color.trim()) {
+      alert('Please enter both name and color')
+      return
+    }
+
+    setLoading(true)
+    const { error } = await supabase
+      .from('Shops')               // ✅ Fixed
+      .insert([{ name: name.trim(), favorite_color: color.trim() }])
+
+    if (error) {
+      console.error(
+        ':x: Error inserting data:',
+        (error as any).message ?? 'No message',
+        (error as any).details ?? 'No details'
+      )
+      alert('Failed to add shop. Check console for details.')
+    } else {
+      console.log(`:white_check_mark: Added ${name} with color ${color}`)
+      setName('')
+      setColor('')
+      fetchShops()
+    }
+
+    setLoading(false)
+  }
+
+  // Delete a shop from the database
+  async function deleteShop(id: number) {
+    const { error } = await supabase
+      .from('Shops')               // ✅ Fixed
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error(
+        ':x: Error deleting shop:',
+        (error as any).message ?? 'No message',
+        (error as any).details ?? 'No details'
+      )
+    } else {
+      console.log(`:white_check_mark: Deleted shop with id ${id}`)
+      fetchShops()
+    }
+  }
+
+  // Handle Enter key press
+  function handleKeyPress(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      addShop()
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="min-h-screen p-6 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold mb-6 text-gray-800">
+          Shop Color🛍️
+        </h1>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              className="border border-gray-300 p-3 rounded-lg w-full sm:w-auto flex-1 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={handleKeyPress}
+              disabled={loading}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <input
+              className="border border-gray-300 p-3 rounded-lg w-full sm:w-auto flex-1 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Favorite color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              onKeyDown={handleKeyPress}
+              disabled={loading}
+            />
+
+            <button
+              onClick={addShop}
+              disabled={loading}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? '...' : 'Add'}
+            </button>
+          </div>
         </div>
-      </main>
-    </div>
-  );
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            Shops ({shops.length})
+          </h2>
+
+          {loading && shops.length === 0 ? (
+            <p className="text-gray-500 italic">Loading...</p>
+          ) : shops.length === 0 ? (
+            <p className="text-gray-500 italic">No shops yet. Add one above!</p>
+          ) : (
+            <ul className="space-y-3">
+              {shops.map((s: Shop) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full border-2 border-gray-300"
+                      style={{ backgroundColor: s.favorite_color }}
+                      title={s.favorite_color}
+                    />
+                    <div>
+                      <strong className="text-gray-800">{s.name}</strong>
+                      <span className="text-gray-500 text-sm ml-2">
+                        — {s.favorite_color}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => s.id && deleteShop(s.id)}
+                    className="text-red-500 hover:text-red-700 px-3 py-1 rounded hover:bg-red-50 transition-colors text-sm font-medium"
+                  >
+                    Delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </main>
+  )
 }
+
+
+
+
+
+
+
+
+
+
